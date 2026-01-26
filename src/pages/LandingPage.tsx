@@ -15,69 +15,144 @@ import {
 } from "lucide-react";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Footer } from "../components/Footer";
 import { GlowingButton } from "../components/GlowingButton";
 import Navbar from "../components/Navigation/Navbar";
 import { SEO } from "../components/SEO";
-import { Footer } from "../components/Footer";
 
-const WalletCard = () => {
+const VirtualCreditCard = () => {
+  const { scrollYProgress } = useScroll();
+  const cardRotateY = useTransform(scrollYProgress, [0.05, 0.5], [0, 0]);
+  const cardRotateX = useTransform(scrollYProgress, [0.05, 0.5], [0, 0]);
+  const cardScale = useTransform(scrollYProgress, [0, 0.4], [0.75, 1.2]);
+  const cardY = useTransform(scrollYProgress, [0, 0.5], [150, -60]);
+  const shimmerX = useTransform(scrollYProgress, [0, 1], ["-500%", "500%"]);
+  const shimmerOpacity = useTransform(scrollYProgress, [0, 0.2, 0.6, 0.8, 1], [0, 0.9, 1, 0.9, 0]);
+  const glowIntensity = useTransform(scrollYProgress, [0, 0.3, 0.7], [0, 0.6, 0.3]);
+  const shadowIntensity = useTransform(scrollYProgress, [0, 0.4], [0.2, 0.5]);
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8, delay: 0.5 }}
-      className="bg-gray-50/80 backdrop-blur-xl border border-black/20 rounded-2xl p-6 max-w-sm mx-auto shadow-2xl shadow-black/10"
-      style={{
-        background: "rgba(249, 250, 251, 0.8)",
-        backdropFilter: "blur(20px)",
-        boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(0, 0, 0, 0.1)",
-      }}
-    >
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-r from-black to-gray-800 rounded-full flex items-center justify-center shadow-lg shadow-black/30">
-            <Wallet className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h3 className="text-black font-semibold">Crypto Credit Wallet</h3>
-            <p className="text-gray-400 text-sm">0x4f2a...8c3d</p>
-          </div>
-        </div>
-      </div>
+    <div className="flex justify-center items-center w-full py-16">
+      <motion.div
+        initial={{ opacity: 0, y: 150, rotateX: 0, scale: 0.6, z: -100 }}
+        animate={{ opacity: 1, y: 0, rotateX: 0, scale: 1, z: 0 }}
+        transition={{
+          duration: 1.6,
+          delay: 0.8,
+          ease: [0.165, 0.84, 0.44, 1],
+          type: "spring",
+          damping: 20,
+          stiffness: 100,
+        }}
+        style={{
+          rotateY: cardRotateY,
+          rotateX: cardRotateX,
+          scale: cardScale,
+          y: cardY,
+          perspective: "3000px",
+          transformStyle: "preserve-3d",
+        }}
+        className="relative flex justify-center items-center"
+      >
+        <div className="relative">
+          {/* Dynamic shadow */}
+          <motion.div
+            className="absolute inset-0 rounded-2xl"
+            style={{
+              background: "radial-gradient(ellipse 120% 60% at center 120%, rgba(0, 0, 0, 0.15) 0%, transparent 70%)",
+              filter: "blur(15px)",
+              transform: "translateY(15px)",
+              opacity: shadowIntensity,
+            }}
+          />
 
-      <div className="space-y-4">
-        <div className="bg-gray-100/50 backdrop-blur-sm rounded-xl p-4 border border-black/10">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-gray-400">Available Credit</span>
-            <span className="text-2xl font-bold text-black">$12,500</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-400">Used</span>
-            <span className="text-black">$2,500</span>
-          </div>
-        </div>
+          {/* Credit card image */}
+          <img
+            src="/card.png"
+            alt="AION Credit Card"
+            className="w-[400px] h-[252px] rounded-2xl object-cover select-none relative z-10"
+            style={{
+              filter: "brightness(1.03) contrast(1.08) saturate(1.1)",
+              boxShadow: `
+                0 25px 50px rgba(0, 0, 0, 0.15),
+                0 15px 30px rgba(0, 0, 0, 0.1),
+                0 8px 15px rgba(0, 0, 0, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2),
+                0 0 0 1px rgba(0, 0, 0, 0.05)
+              `,
+            }}
+            draggable={false}
+          />
 
-        <div className="bg-gray-100/50 backdrop-blur-sm rounded-xl p-4 border border-black/10">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-gray-400">Next Payment</span>
-            <span className="text-gray-200">$150</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-400">Due Date</span>
-            <span className="text-black">Dec 15, 2024</span>
-          </div>
-        </div>
+          {/* Primary shimmer overlay */}
+          <motion.div
+            className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none z-20"
+            style={{
+              background:
+                "linear-gradient(125deg, transparent 15%, rgba(255, 255, 255, 0.8) 45%, rgba(255, 255, 255, 1) 50%, rgba(255, 255, 255, 0.8) 55%, transparent 85%)",
+              transform: `translateX(${shimmerX}) skewX(-25deg)`,
+              opacity: shimmerOpacity,
+              mixBlendMode: "overlay",
+              width: "120%",
+              marginLeft: "-10%",
+            }}
+          />
 
-        <div className="flex gap-3">
-          <button className="flex-1 bg-gradient-to-r from-black to-gray-800 text-white py-3 rounded-xl font-medium hover:shadow-lg hover:shadow-black/40 transition-all duration-300">
-            Draw Funds
-          </button>
-          <button className="flex-1 border border-gray-400 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-100/30 hover:border-black/30 transition-all duration-300">
-            Repay
-          </button>
+          {/* Secondary shimmer layer */}
+          <motion.div
+            className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none z-15"
+            style={{
+              background: "linear-gradient(135deg, transparent 30%, rgba(255, 255, 255, 0.4) 50%, transparent 70%)",
+              transform: `translateX(${useTransform(scrollYProgress, [0, 1], ["-300%", "300%"])}) skewX(-15deg)`,
+              opacity: useTransform(scrollYProgress, [0, 0.3, 0.7, 1], [0, 0.6, 0.6, 0]),
+              mixBlendMode: "soft-light",
+            }}
+          />
+
+          {/* Ambient glow effect */}
+          <motion.div
+            className="absolute inset-0 rounded-2xl pointer-events-none z-5"
+            style={{
+              background:
+                "radial-gradient(ellipse at center, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 40%, transparent 70%)",
+              opacity: glowIntensity,
+              filter: "blur(2px)",
+            }}
+          />
+
+          {/* Floating particles effect */}
+          <motion.div
+            className="absolute -inset-8 rounded-3xl pointer-events-none z-1"
+            style={{
+              background: `
+                radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.1) 0%, transparent 30%),
+                radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.08) 0%, transparent 25%),
+                radial-gradient(circle at 60% 80%, rgba(255, 255, 255, 0.06) 0%, transparent 20%)
+              `,
+              opacity: useTransform(scrollYProgress, [0, 0.4, 0.8], [0, 0.7, 0.4]),
+              animation: "float 6s ease-in-out infinite",
+            }}
+          />
         </div>
-      </div>
-    </motion.div>
+      </motion.div>
+
+      <style>
+        {`
+        @keyframes float {
+          0%,
+          100% {
+            transform: translateY(0px) rotate(0deg);
+          }
+          33% {
+            transform: translateY(-5px) rotate(1deg);
+          }
+          66% {
+            transform: translateY(3px) rotate(-1deg);
+          }
+        }
+        `}
+      </style>
+    </div>
   );
 };
 
@@ -95,18 +170,18 @@ const StepCard = ({ step, title, description, icon: Icon, delay }: StepCardProps
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay }}
-      className="relative bg-gray-50/80 backdrop-blur-xl border border-black/20 rounded-2xl p-8 group hover:border-black/40 transition-all duration-300"
+      className="relative bg-gray-50/80 backdrop-blur-xl border border-gray-200/40 rounded-2xl p-8 group hover:border-gray-300/60 transition-all duration-300"
       style={{
         background: "rgba(249, 250, 251, 0.8)",
         backdropFilter: "blur(20px)",
-        boxShadow: "0 8px 32px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(0, 0, 0, 0.05)",
+        boxShadow: "0 8px 32px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
       }}
     >
-      <div className="absolute inset-0 bg-gradient-to-r from-black/5 to-gray-800/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      <div className="absolute inset-0 bg-gradient-to-r from-gray-100/50 to-gray-200/30 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
       <div className="relative">
         <div className="flex items-center gap-4 mb-4">
-          <div className="w-12 h-12 bg-gradient-to-r from-black to-gray-800 rounded-full flex items-center justify-center shadow-lg shadow-black/30">
+          <div className="w-12 h-12 bg-gradient-to-r from-gray-600 to-gray-500 rounded-full flex items-center justify-center shadow-lg shadow-gray-300/40">
             <Icon className="w-6 h-6 text-white" />
           </div>
           <div className="text-2xl font-bold text-black">0{step}</div>
@@ -129,14 +204,14 @@ const FeatureCard = ({ icon: Icon, title, description }: FeatureCardProps) => {
   return (
     <motion.div
       whileHover={{ scale: 1.05 }}
-      className="bg-gray-50/80 backdrop-blur-xl border border-black/20 rounded-2xl p-6 group hover:border-black/40 transition-all duration-300"
+      className="bg-gray-50/80 backdrop-blur-xl border border-gray-200/40 rounded-2xl p-6 group hover:border-gray-300/60 transition-all duration-300"
       style={{
         background: "rgba(249, 250, 251, 0.8)",
         backdropFilter: "blur(20px)",
-        boxShadow: "0 8px 32px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(0, 0, 0, 0.05)",
+        boxShadow: "0 8px 32px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
       }}
     >
-      <div className="w-12 h-12 bg-gradient-to-r from-black to-gray-800 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-black/30">
+      <div className="w-12 h-12 bg-gradient-to-r from-gray-600 to-gray-500 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-gray-300/40">
         <Icon className="w-6 h-6 text-white" />
       </div>
       <h3 className="text-lg font-semibold text-black mb-2">{title}</h3>
@@ -154,7 +229,7 @@ type FAQItemProps = {
 
 const FAQItem = ({ question, answer, isOpen, onClick }: FAQItemProps) => {
   return (
-    <motion.div initial={false} className="border-b border-black/20 last:border-b-0">
+    <motion.div initial={false} className="border-b border-gray-200/40 last:border-b-0">
       <motion.button
         onClick={onClick}
         className="w-full py-6 flex items-center justify-between text-left hover:text-black transition-colors duration-300"
@@ -229,7 +304,7 @@ export default function LandingPage() {
       <section className="relative min-h-screen flex items-center justify-center px-4 mt-40">
         <motion.div
           style={{ opacity }}
-          className="absolute inset-0 bg-gradient-to-b from-transparent via-black/5 to-transparent"
+          className="absolute inset-0 bg-gradient-to-b from-transparent via-gray-50/30 to-transparent"
         />
 
         <div className="relative z-10 text-center max-w-6xl mx-auto">
@@ -237,7 +312,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="mb-8"
+            className=""
           >
             <h1 className="text-6xl md:text-8xl font-bold mb-6 bg-gradient-to-r from-gray-900 via-gray-600 to-gray-900 bg-clip-text text-transparent">
               Crypto Credit Card.
@@ -245,7 +320,8 @@ export default function LandingPage() {
               Spend Without Selling.
             </h1>
             <p className="text-xl md:text-2xl text-gray-700 mb-12 max-w-3xl mx-auto leading-relaxed">
-              Get instant crypto-backed credit using your USDC. Earn yield on collateral while spending crypto in real life with tap-to-pay technology. No selling required.
+              Get instant crypto-backed credit using your USDC. Earn yield on collateral while spending crypto in real
+              life with tap-to-pay technology. No selling required.
             </p>
           </motion.div>
 
@@ -253,7 +329,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="flex flex-col sm:flex-row gap-6 justify-center mb-16"
+            className="flex flex-col sm:flex-row gap-6 justify-center"
           >
             <GlowingButton variant="primary">
               Start Borrowing
@@ -265,7 +341,7 @@ export default function LandingPage() {
             </GlowingButton>
           </motion.div>
 
-          <WalletCard />
+          <VirtualCreditCard />
         </div>
       </section>
 
@@ -320,7 +396,7 @@ export default function LandingPage() {
       </section>
 
       {/* Lender Section */}
-      <section className="py-24 px-4 bg-gradient-to-b from-transparent to-black/20">
+      <section className="py-24 px-4 bg-gradient-to-b from-transparent to-gray-100/30">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <motion.div
@@ -332,7 +408,8 @@ export default function LandingPage() {
                 Stake USDC for Credit
               </h2>
               <p className="text-xl text-gray-400 mb-8 leading-relaxed">
-                Stake your USDC as collateral to unlock crypto credit lines. Earn competitive APY while your assets back real-world crypto spending power.
+                Stake your USDC as collateral to unlock crypto credit lines. Earn competitive APY while your assets back
+                real-world crypto spending power.
               </p>
 
               <div className="space-y-6 mb-8">
@@ -364,7 +441,7 @@ export default function LandingPage() {
               style={{
                 background: "rgba(249, 250, 251, 0.8)",
                 backdropFilter: "blur(20px)",
-                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(0, 0, 0, 0.1)",
+                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.1),"
               }}
             >
               <h3 className="text-2xl font-bold text-black mb-6">Yield</h3>
@@ -377,7 +454,7 @@ export default function LandingPage() {
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-2">
                     <div
-                      className="bg-gradient-to-r from-black to-gray-600 h-2 rounded-full shadow-lg shadow-black/20"
+                      className="bg-gradient-to-r from-gray-600 to-gray-500 h-2 rounded-full shadow-lg shadow-gray-300/30"
                       style={{ width: "75%" }}
                     />
                   </div>
@@ -396,7 +473,7 @@ export default function LandingPage() {
 
                 <button
                   onClick={() => navigate("/lend/deposit")}
-                  className="w-full bg-gradient-to-r from-black to-gray-800 text-white py-4 rounded-xl font-medium hover:shadow-lg hover:shadow-black/40 transition-all duration-300"
+                  className="w-full bg-gradient-to-r from-gray-600 to-gray-500 text-white py-4 rounded-xl font-medium hover:shadow-lg hover:shadow-gray-300/40 transition-all duration-300"
                 >
                   Deposit Now
                 </button>
@@ -446,22 +523,23 @@ export default function LandingPage() {
       </section>
 
       {/* Security */}
-      <section className="py-24 px-4 bg-gradient-to-b from-transparent to-black/20">
+      <section className="py-24 px-4 bg-gradient-to-b from-transparent to-gray-100/30">
         <div className="max-w-7xl mx-auto text-center">
           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
             <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-gray-800 via-gray-500 to-gray-800 bg-clip-text text-transparent">
               Security & Transparency
             </h2>
             <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto">
-              Your crypto credit is fully self-custodial and transparent. Avoid capital gains while spending crypto for everyday purchases.
+              Your crypto credit is fully self-custodial and transparent. Avoid capital gains while spending crypto for
+              everyday purchases.
             </p>
 
             <div className="flex flex-wrap justify-center items-center gap-8 mb-12">
-              <div className="flex items-center gap-3 bg-black/50 backdrop-blur-sm rounded-xl px-6 py-3 border border-black/20">
+              <div className="flex items-center gap-3 bg-gray-100/80 backdrop-blur-sm rounded-xl px-6 py-3 border border-gray-200/40">
                 <Shield className="w-8 h-8 text-black" />
                 <span className="text-lg font-medium">Non-Custodial Crypto Card</span>
               </div>
-              <div className="flex items-center gap-3 bg-black/50 backdrop-blur-sm rounded-xl px-6 py-3 border border-black/20">
+              <div className="flex items-center gap-3 bg-gray-100/80 backdrop-blur-sm rounded-xl px-6 py-3 border border-gray-200/40">
                 <Wallet className="w-8 h-8 text-black" />
                 <span className="text-lg font-medium">Real-World Crypto Payments</span>
               </div>
@@ -471,7 +549,7 @@ export default function LandingPage() {
       </section>
 
       {/* Comparison Section */}
-      <section className="py-24 px-4 bg-gradient-to-b from-transparent to-black/10">
+      <section className="py-24 px-4 bg-gradient-to-b from-transparent to-gray-50/50">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -496,7 +574,7 @@ export default function LandingPage() {
             <div className="grid md:grid-cols-3 gap-8">
               {/* Aion */}
               <div className="text-center">
-                <div className="w-16 h-16 bg-gradient-to-r from-black to-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-gradient-to-r from-gray-600 to-gray-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <span className="text-white font-bold text-xl">Aion</span>
                 </div>
                 <h3 className="text-xl font-bold text-black mb-4">Best Crypto Credit Card 2025</h3>
@@ -603,11 +681,11 @@ export default function LandingPage() {
           </motion.div>
 
           <div
-            className="bg-black/40 backdrop-blur-xl border border-black/20 rounded-2xl p-8"
+            className="bg-gray-50/80 backdrop-blur-xl border border-gray-200/40 rounded-2xl p-8"
             style={{
               background: "rgba(249, 250, 251, 0.8)",
               backdropFilter: "blur(20px)",
-              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(0, 0, 0, 0.1)",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
             }}
           >
             {faqs.map((faq, index) => (
@@ -624,14 +702,15 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-24 px-4 bg-gradient-to-b from-transparent to-black/40">
+      <section className="py-24 px-4 bg-gradient-to-b from-transparent to-gray-100/40">
         <div className="max-w-4xl mx-auto text-center">
           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
             <h2 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-gray-900 via-gray-600 to-gray-900 bg-clip-text text-transparent">
               Ready for the best crypto credit card 2025?
             </h2>
             <p className="text-xl text-gray-400 mb-12 max-w-2xl mx-auto">
-              Experience crypto credit without selling your assets. Start spending crypto in stores with our stablecoin credit card.
+              Experience crypto credit without selling your assets. Start spending crypto in stores with our stablecoin
+              credit card.
             </p>
 
             <GlowingButton variant="primary" className="text-xl px-12 py-6">
