@@ -12,9 +12,11 @@ import {
   CONTRACT_ADDRESS,
   fetchUsdcBalance,
   getCreditLineInfo as getCreditLineInfoFromLib,
+  hasCreditLine,
   handleTransactionError,
   usdcToUnits,
   validateUsdcAmount,
+  waitForTransaction,
 } from "../../lib/contractUtils";
 
 type CreditLineInfo = {
@@ -38,6 +40,7 @@ export default function StakeCollateral() {
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [usdcBalance, setUsdcBalance] = useState(0);
   const [creditLineInfo, setCreditLineInfo] = useState<CreditLineInfo | null>(null);
+  const [creditLineExists, setCreditLineExists] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const getUsdcBalance = async () => {
@@ -83,7 +86,7 @@ export default function StakeCollateral() {
     if (!account?.address) throw new Error("Wallet not connected");
 
     if (!validateUsdcAmount(creditLimitUsdc)) {
-      throw new Error("Invalid credit limit amount");
+      throw new Error("Invalid credit limit amount. Minimum is 1 USDC.");
     }
 
     const payload: InputTransactionData = {
@@ -101,7 +104,7 @@ export default function StakeCollateral() {
     if (!account?.address) throw new Error("Wallet not connected");
 
     if (!validateUsdcAmount(collateralAmountUsdc)) {
-      throw new Error("Invalid collateral amount");
+      throw new Error("Invalid collateral amount. Minimum is 1 USDC.");
     }
 
     const payload: InputTransactionData = {
@@ -125,7 +128,7 @@ export default function StakeCollateral() {
       const amount = parseFloat(stakeAmount);
 
       if (!validateUsdcAmount(amount)) {
-        throw new Error("Invalid credit limit amount. Please enter a value between 0 and 1,000,000 USDC");
+        throw new Error("Invalid credit limit amount. Minimum is 1 USDC.");
       }
 
       if (amount > usdcBalance) {
@@ -137,6 +140,8 @@ export default function StakeCollateral() {
       const result = await openCreditLine(amount);
 
       console.log("Credit line opened:", result);
+
+      await waitForTransaction(result.hash);
 
       toast.success(`Successfully opened credit line with $${amount.toFixed(2)} USDC limit!`, {
         id: "stake",
@@ -153,7 +158,9 @@ export default function StakeCollateral() {
       setTimeout(() => setTransactionStatus("idle"), 3000);
     } catch (error: any) {
       console.error("Credit line opening error:", error);
-      const userFriendlyError = handleTransactionError(error);
+      const userFriendlyError = error.message?.includes("Minimum") || error.message?.includes("Insufficient")
+        ? error.message
+        : handleTransactionError(error);
       setErrorMessage(userFriendlyError);
       setTransactionStatus("error");
 
@@ -176,7 +183,7 @@ export default function StakeCollateral() {
       const amount = parseFloat(stakeAmount);
 
       if (!validateUsdcAmount(amount)) {
-        throw new Error("Invalid collateral amount. Please enter a value between 0 and 1,000,000 USDC");
+        throw new Error("Invalid collateral amount. Minimum is 1 USDC.");
       }
 
       if (amount > usdcBalance) {
@@ -188,6 +195,8 @@ export default function StakeCollateral() {
       const result = await addCollateral(amount);
 
       console.log("Collateral added:", result);
+
+      await waitForTransaction(result.hash);
 
       toast.success(`Successfully added ${amount} USDC collateral!`, {
         id: "stake",
@@ -201,7 +210,9 @@ export default function StakeCollateral() {
       setTimeout(() => setTransactionStatus("idle"), 3000);
     } catch (error: any) {
       console.error("Add collateral error:", error);
-      const userFriendlyError = handleTransactionError(error);
+      const userFriendlyError = error.message?.includes("Minimum") || error.message?.includes("Insufficient")
+        ? error.message
+        : handleTransactionError(error);
       setErrorMessage(userFriendlyError);
       setTransactionStatus("error");
 
@@ -220,7 +231,7 @@ export default function StakeCollateral() {
       return;
     }
 
-    if (creditLineInfo && creditLineInfo.isActive) {
+    if (creditLineExists) {
       handleAddCollateral();
     } else {
       handleOpenCreditLine();
@@ -234,6 +245,10 @@ export default function StakeCollateral() {
     try {
       // Get USDC balance first
       await getUsdcBalance();
+
+      // Check if credit line exists in contract (survives full withdrawal)
+      const exists = await hasCreditLine(account.address.toString());
+      setCreditLineExists(exists);
 
       // Then try to get credit line info - this might be null for new users
       const creditInfo = await getCreditLineInfo();
@@ -261,7 +276,7 @@ export default function StakeCollateral() {
   const isLoading = transactionStatus === "approving" || transactionStatus === "staking";
   const canStake = connected && isValidAmount && !isLoading;
 
-  const hasExistingCredit = creditLineInfo && creditLineInfo.isActive;
+  const hasExistingCredit = creditLineExists || (creditLineInfo && creditLineInfo.isActive);
 
   if (!connected) {
     return (

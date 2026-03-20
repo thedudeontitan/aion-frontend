@@ -35,12 +35,14 @@ import { WalletSelector } from "../../components/WalletSelector";
 import {
   CONTRACT_ADDRESS,
   ADMIN_ADDRESS,
-  fetchUsdcBalance,
+  EXPLORER_URL,
+  EXPLORER_NETWORK_PARAM,
   getCreditLineInfo as getCreditLineInfoFromLib,
   getRecentTransactions,
   usdcToUnits,
   validateAptosAddress,
   validateUsdcAmount,
+  waitForTransaction,
 } from "../../lib/contractUtils";
 
 type CreditLineInfo = {
@@ -921,7 +923,7 @@ const RecentTransactions = ({
 
   const openTransactionHash = (hash?: string) => {
     if (hash) {
-      window.open(`https://explorer.aptoslabs.com/txn/${hash}?network=mainnet`, "_blank");
+      window.open(`${EXPLORER_URL}/txn/${hash}?${EXPLORER_NETWORK_PARAM}`, "_blank");
     }
   };
 
@@ -1057,7 +1059,7 @@ export default function PaymentsPage() {
     }
 
     if (!validateUsdcAmount(amountUsdc)) {
-      throw new Error("Invalid payment amount");
+      throw new Error("Invalid payment amount. Minimum is 1 USDC.");
     }
 
     const payload: InputTransactionData = {
@@ -1074,19 +1076,6 @@ export default function PaymentsPage() {
     return await signAndSubmitTransaction(payload);
   };
 
-  // Get USDC balance
-  const getUsdcBalance = useCallback(async () => {
-    if (!account?.address) return;
-
-    try {
-      const balance = await fetchUsdcBalance(account.address.toString());
-      return balance;
-    } catch (error) {
-      console.error("Error fetching USDC balance:", error);
-      return 0;
-    }
-  }, [account?.address]);
-
   // Load all data
   const loadData = useCallback(async () => {
     if (!connected || !account?.address) return;
@@ -1094,10 +1083,7 @@ export default function PaymentsPage() {
     setLoading(true);
     setLoadingTransactions(true);
     try {
-      // Get USDC balance first
-      await getUsdcBalance();
-
-      // Then try to get credit line info - this might be null for new users
+      // Get credit line info - this might be null for new users
       const creditInfo = await getCreditLineInfo();
 
       console.log("Credit Line Info:", creditInfo);
@@ -1113,7 +1099,7 @@ export default function PaymentsPage() {
       setLoading(false);
       setLoadingTransactions(false);
     }
-  }, [connected, account?.address, getUsdcBalance, getCreditLineInfo]);
+  }, [connected, account?.address, getCreditLineInfo]);
 
   // Handle payment with comprehensive validation
   const handlePayment = async (data: PaymentData): Promise<void> => {
@@ -1145,6 +1131,8 @@ export default function PaymentsPage() {
       const result = await executeInstantPayment(recipientAddress, amount);
 
       console.log("Payment result:", result);
+
+      await waitForTransaction(result.hash);
 
       setTransactionStatus({
         status: "success",

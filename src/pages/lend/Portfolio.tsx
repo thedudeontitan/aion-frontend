@@ -551,6 +551,8 @@ export default function Portfolio() {
 
       console.log("Withdrawal result:", result);
 
+      await aptos.waitForTransaction({ transactionHash: result.hash });
+
       toast.success(`Successfully withdrew ${amount} USDC from the lending pool!`, {
         id: "withdraw",
       });

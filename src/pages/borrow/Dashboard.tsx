@@ -9,6 +9,7 @@ import {
   ExternalLink,
   Info,
   Loader,
+  Minus,
   Plus,
   Shield,
   Target,
@@ -28,8 +29,12 @@ import {
   getReputationData,
   checkCreditIncreaseEligibility,
   fetchUsdcBalance,
+  hasCreditLine,
   handleTransactionError,
+  validateUsdcAmount,
   usdcToUnits,
+  waitForTransaction,
+  withdrawCollateral,
 } from "../../lib/contractUtils";
 
 type CreditSummaryCardProps = {
@@ -86,10 +91,27 @@ const CreditSummaryCard = ({ creditLimit, usedCredit, availableCredit }: CreditS
 
 type CollateralCardProps = {
   stakedAmount: number;
+  currentDebt: number;
   onStakeMore: () => void;
+  onWithdraw: (amount: number) => void;
+  isWithdrawing: boolean;
 };
 
-const CollateralCard = ({ stakedAmount, onStakeMore }: CollateralCardProps) => {
+const CollateralCard = ({ stakedAmount, currentDebt, onStakeMore, onWithdraw, isWithdrawing }: CollateralCardProps) => {
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const canWithdraw = currentDebt === 0 && stakedAmount > 0;
+  const availableToWithdraw = currentDebt === 0 ? stakedAmount : 0;
+
+  const handleWithdraw = () => {
+    const amount = parseFloat(withdrawAmount);
+    if (!amount || amount <= 0) {
+      toast.error("Please enter a valid withdrawal amount");
+      return;
+    }
+    onWithdraw(amount);
+    setWithdrawAmount("");
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -110,12 +132,56 @@ const CollateralCard = ({ stakedAmount, onStakeMore }: CollateralCardProps) => {
         </div>
       </div>
 
-      <div className="text-center mb-6">
+      <div className="text-center mb-4">
         <div className="text-3xl font-bold text-black mb-1">
           ${stakedAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </div>
         <div className="text-gray-600 text-sm">USDC Staked</div>
       </div>
+
+      <div className="text-center mb-4">
+        <div className="text-sm text-gray-600">Available to withdraw</div>
+        <div className="text-lg font-semibold text-black">
+          ${availableToWithdraw.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </div>
+      </div>
+
+      {canWithdraw ? (
+        <div className="space-y-3 mb-3">
+          <div className="relative">
+            <input
+              type="number"
+              value={withdrawAmount}
+              onChange={(e) => setWithdrawAmount(e.target.value)}
+              placeholder="Enter amount to withdraw"
+              className="w-full bg-gray-100 border border-gray-300 rounded-xl p-3 pr-16 text-black placeholder-gray-500 focus:border-black/50 focus:outline-none"
+            />
+            <button
+              onClick={() => setWithdrawAmount(stakedAmount.toString())}
+              className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-black text-white text-xs font-medium rounded-lg hover:bg-gray-800 transition-colors"
+            >
+              MAX
+            </button>
+          </div>
+          <GlowingButton onClick={handleWithdraw} className="w-full" disabled={isWithdrawing}>
+            {isWithdrawing ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                Withdrawing...
+              </>
+            ) : (
+              <>
+                <Minus className="w-4 h-4" />
+                Withdraw
+              </>
+            )}
+          </GlowingButton>
+        </div>
+      ) : currentDebt > 0 ? (
+        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 text-center mb-3">
+          <div className="text-yellow-700 text-sm">Repay all debt to withdraw collateral</div>
+        </div>
+      ) : null}
 
       <GlowingButton onClick={onStakeMore} className="w-full">
         <Plus className="w-4 h-4" />
@@ -343,6 +409,7 @@ export default function BorrowerDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [repayLoading, setRepayLoading] = useState(false);
+  const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [usdcBalance, setUsdcBalance] = useState(0);
 
   // Real contract data
@@ -367,6 +434,7 @@ export default function BorrowerDashboard() {
   } | null>(null);
 
   const [potentialIncrease, setPotentialIncrease] = useState(0);
+  const [creditLineExists, setCreditLineExists] = useState(false);
 
   const loadDashboardData = useCallback(async () => {
     if (!account?.address) return;
@@ -377,12 +445,15 @@ export default function BorrowerDashboard() {
     try {
       const userAddress = account.address.toString();
 
-      const [creditInfo, reputation, eligibility, balance] = await Promise.all([
+      const [creditInfo, reputation, eligibility, balance, exists] = await Promise.all([
         getCreditLineInfo(userAddress),
         getReputationData(userAddress).catch(() => null),
         checkCreditIncreaseEligibility(userAddress).catch(() => null),
         fetchUsdcBalance(userAddress),
+        hasCreditLine(userAddress),
       ]);
+
+      setCreditLineExists(exists);
 
       if (creditInfo) {
         setCreditData(creditInfo);
@@ -451,6 +522,8 @@ export default function BorrowerDashboard() {
       const result = await signAndSubmitTransaction(payload);
       console.log("Repayment result:", result);
 
+      await waitForTransaction(result.hash);
+
       toast.success(`Repaid $${totalRepayment.toFixed(2)} USDC successfully!`, { id: "repay" });
 
       // Refresh data
@@ -461,6 +534,49 @@ export default function BorrowerDashboard() {
       toast.error(errorMsg, { id: "repay" });
     } finally {
       setRepayLoading(false);
+    }
+  };
+
+  const handleWithdrawCollateral = async (amount: number) => {
+    if (!account?.address || !creditData) return;
+
+    if (!validateUsdcAmount(amount)) {
+      toast.error("Minimum withdrawal amount is 1 USDC");
+      return;
+    }
+
+    if (amount > creditData.collateral) {
+      toast.error(`Cannot withdraw more than staked amount ($${creditData.collateral.toFixed(2)})`);
+      return;
+    }
+
+    if (creditData.currentDebt > 0) {
+      toast.error("Repay all debt before withdrawing collateral");
+      return;
+    }
+
+    try {
+      setWithdrawLoading(true);
+      toast.loading("Processing withdrawal...", { id: "withdraw" });
+
+      const result = await withdrawCollateral(amount, signAndSubmitTransaction);
+
+      if (!result.success) {
+        toast.error(result.error || "Withdrawal failed", { id: "withdraw" });
+        return;
+      }
+
+      await waitForTransaction(result.hash!);
+
+      toast.success(`Withdrew $${amount.toFixed(2)} USDC collateral successfully!`, { id: "withdraw" });
+
+      await loadDashboardData();
+    } catch (err: any) {
+      console.error("Withdrawal error:", err);
+      const errorMsg = handleTransactionError(err);
+      toast.error(errorMsg, { id: "withdraw" });
+    } finally {
+      setWithdrawLoading(false);
     }
   };
 
@@ -569,7 +685,7 @@ export default function BorrowerDashboard() {
         </motion.div>
 
         {/* Show different content based on whether user has an active credit line */}
-        {!creditData?.isActive ? (
+        {!creditData?.isActive && !creditLineExists ? (
           // No active credit line - show call to action
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -601,7 +717,13 @@ export default function BorrowerDashboard() {
 
             {/* Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              <CollateralCard stakedAmount={creditData.collateral} onStakeMore={handleStakeMore} />
+              <CollateralCard
+                stakedAmount={creditData.collateral}
+                currentDebt={creditData.currentDebt}
+                onStakeMore={handleStakeMore}
+                onWithdraw={handleWithdrawCollateral}
+                isWithdrawing={withdrawLoading}
+              />
 
               <OutstandingLoanCard
                 principal={creditData.borrowed}

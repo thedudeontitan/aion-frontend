@@ -15,6 +15,7 @@ import {
   usdcToUnits,
   validateUsdcAmount,
   getPoolStats,
+  waitForTransaction,
 } from "../../lib/contractUtils";
 
 type LockupPeriod = {
@@ -156,7 +157,7 @@ export default function Deposit() {
     const amount = parseFloat(depositAmount);
 
     if (!validateUsdcAmount(amount)) {
-      toast.error("Invalid deposit amount. Please enter a value between 0 and 1,000,000 USDC");
+      toast.error("Invalid deposit amount. Minimum is 1 USDC, maximum is 1,000,000 USDC");
       return;
     }
 
@@ -174,6 +175,8 @@ export default function Deposit() {
       const result = await depositUSDC(amount);
 
       console.log("Deposit result:", result);
+
+      await waitForTransaction(result.hash);
 
       toast.success(`Successfully deposited ${amount} USDC to the lending pool!`, {
         id: "deposit",
