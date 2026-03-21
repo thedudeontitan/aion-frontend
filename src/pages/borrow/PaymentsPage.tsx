@@ -696,7 +696,7 @@ const PaymentSection = ({
         <GlowingButton
           onClick={() => onPayment({ recipientAddress, paymentAmount })}
           className="w-full py-4 text-lg font-semibold"
-          // disabled={!isValidPayment || isProcessing}
+          disabled={availableCredit <= 0 || isProcessing}
         >
           {isProcessing ? (
             <>
