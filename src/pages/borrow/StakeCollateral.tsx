@@ -1,6 +1,6 @@
 import { useWallet, type InputTransactionData } from "@aptos-labs/wallet-adapter-react";
 import { motion } from "framer-motion";
-import { AlertCircle, CheckCircle, CreditCard, DollarSign, Info, Loader, Plus, Wallet } from "lucide-react";
+import { AlertCircle, CheckCircle, CreditCard, DollarSign, Info, Loader, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -329,19 +329,9 @@ export default function StakeCollateral() {
 
   return (
     <div className="min-h-screen bg-white text-black">
-      {/* Wallet Info */}
-      <div className="flex items-center gap-4 w-full justify-end p-4">
-        <div className="text-right">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Wallet className="w-4 h-4 text-black" />
-            <span className="font-mono">
-              {account?.address
-                ? `${account.address.toString().slice(0, 6)}...${account.address.toString().slice(-4)}`
-                : ""}
-            </span>
-          </div>
-          <div className="text-xs text-gray-500">Aptos Wallet</div>
-        </div>
+      <div className="fixed top-6 right-6 z-50 flex flex-row gap-2">
+        <WalletSelector />
+        <LoginWithGoogleButton />
       </div>
 
       <div className="relative z-10 max-w-lg mx-auto px-4 py-24">
