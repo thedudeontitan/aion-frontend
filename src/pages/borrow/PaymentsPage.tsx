@@ -712,6 +712,13 @@ const PaymentSection = ({
           )}
         </GlowingButton>
 
+        {availableCredit <= 0 && !isProcessing && (
+          <div className="flex items-center gap-2 text-sm text-red-500 justify-center mt-2">
+            <AlertCircle className="w-4 h-4" />
+            <span>Insufficient credit balance. Repay your outstanding debt to free up credit.</span>
+          </div>
+        )}
+
         {/* Payment Info */}
         <div className="flex items-center gap-2 text-xs text-gray-500 justify-center">
           <Lock className="w-3 h-3" />
